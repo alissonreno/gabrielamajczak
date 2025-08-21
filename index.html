@@ -6,10 +6,6 @@
     <title>Catálogo de Produtos - Gabriela H. Majczak Furquim</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Incluir Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <style>
         :root {
             --primary: #ff4b93;
@@ -685,7 +681,7 @@
             scrollbar-color: var(--primary) var(--light-gray);
         }
         
-        .featured-products::-webkit-scrollbar {
+        .featured-products::-webkit-scbar {
             height: 8px;
         }
         
@@ -1416,21 +1412,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Configuração do Firebase
-            const firebaseConfig = {
-                apiKey: "AIzaSyB6n-kTd2o1QJsTncfqtCNXVl9fLHHpcyU",
-                authDomain: "marykay-94a03.firebaseapp.com",
-                projectId: "marykay-94a03",
-                storageBucket: "marykay-94a03.firebasestorage.app",
-                messagingSenderId: "238729519698",
-                appId: "1:238729519698:web:4f62bb3576be200fba358b",
-                measurementId: "G-TTB571MWX3"
-            };
-            
-            // Inicializar Firebase
-            firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-            
             // Elementos da UI
             const viewProductsBtn = document.getElementById('viewProductsBtn');
             const addProductBtn = document.getElementById('addProductBtn');
@@ -1492,6 +1473,7 @@
             let currentPage = 1;
             const productsPerPage = 9;
             const ADMIN_PASSWORD = "iris1234";
+            const STORAGE_KEY = 'gabriela_products';
             
             // Inicialização
             init();
@@ -1502,11 +1484,8 @@
                 renderCategories();
                 updateCartUI();
                 
-                // Verificar se há conexão com a internet
-                checkOnlineStatus();
-                
-                // Carregar produtos do Firestore
-                loadProductsFromFirestore();
+                // Carregar produtos do localStorage
+                loadProducts();
             }
             
             function setupEventListeners() {
@@ -1570,108 +1549,70 @@
                 modalCartBtn.addEventListener('click', addCurrentProductToCart);
             }
             
-            // Funções do Firestore
-            async function loadProductsFromFirestore() {
+            function loadProducts() {
                 try {
-                    // Verificar se estamos online
-                    if (!navigator.onLine) {
-                        throw new Error('Sem conexão com a internet');
-                    }
-                    
-                    const snapshot = await db.collection('products').orderBy('name').get();
-                    products = [];
-                    
-                    snapshot.forEach(doc => {
-                        products.push({ id: doc.id, ...doc.data() });
-                    });
-                    
-                    // Salvar localmente para acesso offline
-                    localStorage.setItem('products', JSON.stringify(products));
-                    
-                    renderProducts();
-                    renderFeaturedProducts();
-                    updateSyncStatus('Sincronizado: ' + new Date().toLocaleString(), 'success');
-                } catch (error) {
-                    console.error('Erro ao carregar produtos:', error);
-                    
-                    // Tentar carregar do localStorage em caso de erro
-                    const localProducts = localStorage.getItem('products');
-                    if (localProducts) {
-                        products = JSON.parse(localProducts);
+                    const storedProducts = localStorage.getItem(STORAGE_KEY);
+                    if (storedProducts) {
+                        products = JSON.parse(storedProducts);
                         renderProducts();
                         renderFeaturedProducts();
-                        updateSyncStatus('Usando dados offline', 'warning');
-                        showNotification('Usando dados offline. Verifique sua conexão.', 'warning');
+                        updateSyncStatus('Dados carregados localmente', 'success');
                     } else {
-                        showNotification('Erro ao carregar produtos. Verifique sua conexão.', 'error');
-                    }
-                }
-            }
-            
-            async function saveProductToFirestore(product) {
-                try {
-                    if (product.id) {
-                        // Atualizar produto existente
-                        const productId = product.id;
-                        const productData = { ...product };
-                        delete productData.id;
-                        
-                        await db.collection('products').doc(productId).update(productData);
-                        return productId;
-                    } else {
-                        // Adicionar novo produto
-                        const productData = { ...product };
-                        delete productData.id;
-                        
-                        const docRef = await db.collection('products').add(productData);
-                        return docRef.id;
+                        // Dados iniciais de exemplo
+                        products = [
+                            {
+                                id: '1',
+                                name: 'Base Líquida Mary Kay',
+                                brand: 'Mary Kay',
+                                category: 'Maquiagem',
+                                price: 89.90,
+                                oldPrice: 99.90,
+                                description: 'Base líquida de longa duração com acabamento natural. Disponível em vários tons.',
+                                image: 'https://via.placeholder.com/300x200/ff4b93/ffffff?text=Base+Mary+Kay',
+                                isPromotion: true
+                            },
+                            {
+                                id: '2',
+                                name: 'Hidratante Facial Natura',
+                                brand: 'Natura',
+                                category: 'Skincare',
+                                price: 59.90,
+                                oldPrice: null,
+                                description: 'Hidratante facial com extrato de rosas para pele sensível. Proporciona hidratação intensa.',
+                                image: 'https://via.placeholder.com/300x200/3a015c/ffffff?text=Hidratante+Natura',
+                                isPromotion: false
+                            },
+                            {
+                                id: '3',
+                                name: 'Perfume Avon Femme',
+                                brand: 'Avon',
+                                category: 'Perfumaria',
+                                price: 129.90,
+                                oldPrice: 159.90,
+                                description: 'Fragrância feminina com notas florais e amadeiradas. Duração de até 12 horas.',
+                                image: 'https://via.placeholder.com/300x200/4d027a/ffffff?text=Perfume+Avon',
+                                isPromotion: true
+                            }
+                        ];
+                        saveProducts();
+                        renderProducts();
+                        renderFeaturedProducts();
                     }
                 } catch (error) {
-                    console.error('Erro ao salvar produto:', error);
-                    
-                    // Em caso de erro, salvar localmente para sincronização posterior
-                    if (!product.id) {
-                        product.id = 'local_' + Date.now();
-                    }
-                    
-                    const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-                    const existingIndex = localProducts.findIndex(p => p.id === product.id);
-                    
-                    if (existingIndex !== -1) {
-                        localProducts[existingIndex] = product;
-                    } else {
-                        localProducts.push(product);
-                    }
-                    
-                    localStorage.setItem('products', JSON.stringify(localProducts));
-                    localStorage.setItem('pendingSync', 'true');
-                    
-                    throw error;
+                    console.error('Erro ao carregar produtos:', error);
+                    showNotification('Erro ao carregar produtos.', 'error');
                 }
             }
             
-            async function deleteProductFromFirestore(productId) {
+            function saveProducts() {
                 try {
-                    await db.collection('products').doc(productId).delete();
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+                    updateSyncStatus('Dados salvos localmente: ' + new Date().toLocaleString(), 'success');
                     return true;
                 } catch (error) {
-                    console.error('Erro ao excluir produto:', error);
-                    
-                    // Marcar para exclusão posterior se estiver offline
-                    if (productId.startsWith('local_')) {
-                        const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-                        const updatedProducts = localProducts.filter(p => p.id !== productId);
-                        localStorage.setItem('products', JSON.stringify(updatedProducts));
-                        return true;
-                    } else {
-                        // Adicionar à lista de exclusões pendentes
-                        const pendingDeletes = JSON.parse(localStorage.getItem('pendingDeletes') || '[]');
-                        pendingDeletes.push(productId);
-                        localStorage.setItem('pendingDeletes', JSON.stringify(pendingDeletes));
-                        localStorage.setItem('pendingSync', 'true');
-                        
-                        throw error;
-                    }
+                    console.error('Erro ao salvar produtos:', error);
+                    showNotification('Erro ao salvar produtos.', 'error');
+                    return false;
                 }
             }
             
@@ -1865,7 +1806,7 @@
                 renderProducts();
             }
             
-            async function handleFormSubmit(e) {
+            function handleFormSubmit(e) {
                 e.preventDefault();
                 
                 if (!requireAuth()) return;
@@ -1885,13 +1826,12 @@
                 // Se estamos editando, manter o ID
                 if (editingProductId) {
                     product.id = editingProductId;
+                } else {
+                    // Gerar um ID único para o novo produto
+                    product.id = 'prod_' + Date.now();
                 }
                 
                 try {
-                    // Salvar no Firestore
-                    const productId = await saveProductToFirestore(product);
-                    product.id = productId;
-                    
                     // Atualizar lista local de produtos
                     if (editingProductId) {
                         const index = products.findIndex(p => p.id === editingProductId);
@@ -1902,37 +1842,19 @@
                         products.push(product);
                     }
                     
-                    // Salvar no localStorage para acesso offline
-                    localStorage.setItem('products', JSON.stringify(products));
-                    
-                    showNotification('Produto salvo com sucesso!', 'success');
-                    
-                    // Resetar formulário e voltar para a visualização de produtos
-                    resetForm();
-                    showProductsView();
-                    renderCategories();
-                    renderFeaturedProducts();
-                    
-                } catch (error) {
-                    showNotification('Produto salvo localmente. Será sincronizado quando online.', 'warning');
-                    
-                    // Atualizar a lista de produtos com o novo produto local
-                    if (editingProductId) {
-                        const index = products.findIndex(p => p.id === editingProductId);
-                        if (index !== -1) {
-                            products[index] = product;
-                        }
-                    } else {
-                        products.push(product);
+                    // Salvar no localStorage
+                    if (saveProducts()) {
+                        showNotification('Produto salvo com sucesso!', 'success');
+                        
+                        // Resetar formulário e voltar para a visualização de produtos
+                        resetForm();
+                        showProductsView();
+                        renderCategories();
+                        renderFeaturedProducts();
                     }
                     
-                    // Renderizar produtos novamente
-                    renderProducts();
-                    renderFeaturedProducts();
-                    
-                    // Resetar formulário e voltar para a visualização de produtos
-                    resetForm();
-                    showProductsView();
+                } catch (error) {
+                    showNotification('Erro ao salvar produto.', 'error');
                 }
             }
             
@@ -2463,49 +2385,32 @@
                 }
             }
             
-            async function deleteProduct(id) {
+            function deleteProduct(id) {
                 if (!requireAuth()) return;
                 
                 if (confirm('Tem certeza que deseja excluir este produto?')) {
                     try {
-                        // Excluir do Firestore
-                        await deleteProductFromFirestore(id);
-                        
                         // Atualizar lista local
                         products = products.filter(p => p.id !== id);
-                        localStorage.setItem('products', JSON.stringify(products));
                         
-                        // Remover dos favoritos também
-                        favorites = favorites.filter(favId => favId !== id);
-                        localStorage.setItem('favorites', JSON.stringify(favorites));
-                        
-                        // Remover do carrinho também
-                        cart = cart.filter(item => item.id !== id);
-                        localStorage.setItem('cart', JSON.stringify(cart));
-                        
-                        showNotification('Produto excluído com sucesso!', 'success');
-                        renderProducts();
-                        renderFeaturedProducts();
-                        updateCartUI();
+                        // Salvar no localStorage
+                        if (saveProducts()) {
+                            // Remover dos favoritos também
+                            favorites = favorites.filter(favId => favId !== id);
+                            localStorage.setItem('favorites', JSON.stringify(favorites));
+                            
+                            // Remover do carrinho também
+                            cart = cart.filter(item => item.id !== id);
+                            localStorage.setItem('cart', JSON.stringify(cart));
+                            
+                            showNotification('Produto excluído com sucesso!', 'success');
+                            renderProducts();
+                            renderFeaturedProducts();
+                            updateCartUI();
+                        }
                         
                     } catch (error) {
-                        showNotification('Produto excluído localmente. A exclusão será sincronizada quando online.', 'warning');
-                        
-                        // Atualizar a lista local mesmo em caso de erro
-                        products = products.filter(p => p.id !== id);
-                        localStorage.setItem('products', JSON.stringify(products));
-                        
-                        // Remover dos favoritos também
-                        favorites = favorites.filter(favId => favId !== id);
-                        localStorage.setItem('favorites', JSON.stringify(favorites));
-                        
-                        // Remover do carrinho também
-                        cart = cart.filter(item => item.id !== id);
-                        localStorage.setItem('cart', JSON.stringify(cart));
-                        
-                        renderProducts();
-                        renderFeaturedProducts();
-                        updateCartUI();
+                        showNotification('Erro ao excluir produto.', 'error');
                     }
                 }
             }
@@ -2539,14 +2444,14 @@
                 importFile.click();
             }
             
-            async function importData(event) {
+            function importData(event) {
                 if (!requireAuth()) return;
                 
                 const file = event.target.files[0];
                 if (!file) return;
                 
                 const reader = new FileReader();
-                reader.onload = async function(e) {
+                reader.onload = function(e) {
                     try {
                         const importedProducts = JSON.parse(e.target.result);
                         
@@ -2554,19 +2459,22 @@
                             // Adicionar IDs aos produtos importados que não têm
                             for (const product of importedProducts) {
                                 if (!product.id) {
-                                    product.id = Date.now().toString();
+                                    product.id = 'prod_' + Date.now();
                                 }
                                 if (!product.category) {
                                     product.category = "Outro";
                                 }
-                                
-                                // Salvar cada produto no Firestore
-                                await saveProductToFirestore(product);
                             }
                             
-                            // Recarregar produtos do Firestore
-                            await loadProductsFromFirestore();
-                            showNotification('Dados importados com sucesso!', 'success');
+                            // Substituir os produtos atuais pelos importados
+                            products = importedProducts;
+                            
+                            // Salvar no localStorage
+                            if (saveProducts()) {
+                                renderProducts();
+                                renderFeaturedProducts();
+                                showNotification('Dados importados com sucesso!', 'success');
+                            }
                             
                         } else {
                             throw new Error('Formato inválido');
@@ -2582,64 +2490,11 @@
                 event.target.value = '';
             }
             
-            // Sincronização com Firestore
-            async function syncWithCloud() {
-                try {
-                    updateSyncStatus('Sincronizando...', 'warning');
-                    
-                    // Verificar se há produtos locais pendentes para sincronizar
-                    const pendingSync = localStorage.getItem('pendingSync');
-                    const pendingDeletes = JSON.parse(localStorage.getItem('pendingDeletes') || '[]');
-                    
-                    if (pendingSync === 'true' || pendingDeletes.length > 0) {
-                        // Sincronizar produtos locais
-                        const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-                        const localProductsToSync = localProducts.filter(p => p.id && p.id.startsWith('local_'));
-                        
-                        for (const product of localProductsToSync) {
-                            try {
-                                const productData = { ...product };
-                                delete productData.id;
-                                
-                                const docRef = await db.collection('products').add(productData);
-                                
-                                // Atualizar o ID local com o ID real do Firestore
-                                const index = products.findIndex(p => p.id === product.id);
-                                if (index !== -1) {
-                                    products[index].id = docRef.id;
-                                }
-                                
-                                // Remover da lista de produtos locais
-                                localProducts.splice(localProducts.findIndex(p => p.id === product.id), 1);
-                            } catch (error) {
-                                console.error('Erro ao sincronizar produto local:', error);
-                            }
-                        }
-                        
-                        // Processar exclusões pendentes
-                        for (const productId of pendingDeletes) {
-                            try {
-                                await db.collection('products').doc(productId).delete();
-                            } catch (error) {
-                                console.error('Erro ao sincronizar exclusão:', error);
-                            }
-                        }
-                        
-                        // Limpar flags de sincronização
-                        localStorage.removeItem('pendingSync');
-                        localStorage.removeItem('pendingDeletes');
-                        localStorage.setItem('products', JSON.stringify(localProducts));
-                    }
-                    
-                    // Recarregar produtos do Firestore
-                    await loadProductsFromFirestore();
-                    
-                    showNotification('Dados sincronizados com sucesso!', 'success');
-                } catch (error) {
-                    console.error('Erro ao sincronizar:', error);
-                    updateSyncStatus('Falha na sincronização', 'error');
-                    showNotification('Erro ao sincronizar. Verifique sua conexão.', 'error');
-                }
+            // Sincronização com "nuvem" (localStorage)
+            function syncWithCloud() {
+                // Para esta versão simplificada, apenas recarrega os dados do localStorage
+                loadProducts();
+                showNotification('Dados sincronizados com sucesso!', 'success');
             }
             
             function showNotification(message, type = 'success') {
@@ -2660,18 +2515,6 @@
                 setTimeout(() => {
                     notification.classList.remove('show');
                 }, 3000);
-            }
-            
-            function checkOnlineStatus() {
-                window.addEventListener('online', function() {
-                    showNotification('Conectado à internet. Sincronizando dados...', 'success');
-                    syncWithCloud();
-                });
-                
-                window.addEventListener('offline', function() {
-                    showNotification('Sem conexão com a internet. Modo offline ativado.', 'warning');
-                    updateSyncStatus('Modo offline', 'warning');
-                });
             }
             
             // Verificar autenticação ao carregar
